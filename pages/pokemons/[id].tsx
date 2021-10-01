@@ -1,84 +1,99 @@
-import { GetStaticPaths, NextComponentType } from 'next';
-import Link from 'next/link';
-// import styles from './Pokemon.module.css';
+import { GetStaticPaths, GetStaticProps } from 'next';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { IPokemon } from '../../components/PokemonGridContainer';
+import fetchPokemonById from '../../lib/fetchPokemonById';
 
-type Pokemon = {
-  id: any;
-  name: string;
-  url: string;
-  types?: any;
-  sprites?: { front_default: string };
-};
+const POKEMON_ID = /^[0-9]+$/;
 
-const Pokemon = ({ pokemon }: any) => {
+interface Props {
+  pokemon: IPokemon;
+}
+
+const Pokemon: React.FC<Props> = ({ pokemon }) => {
+  const { isFallback } = useRouter();
+
   return (
-    <div>
-      <h2>{pokemon.id}</h2>
-      <h2>{pokemon.name}</h2>
-      <p>Find in-depth information about Next.js features and API.</p>
-    </div>
+    <>
+      {isFallback ? (
+        <div>loading...</div>
+      ) : (
+        <div className="grid">
+          <div className="card">
+            <h2>{`${pokemon.id} ${pokemon.name}`}</h2>
+            <Image
+              src={pokemon.sprites?.other?.['official-artwork']?.front_default!}
+              alt={`${pokemon.name} sprite`}
+              width={125}
+              height={125}
+            />
+            <p>{pokemon.name}</p>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .grid {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          max-width: 800px;
+          margin-top: 3rem;
+        }
+
+        .card {
+          margin: 1rem;
+          padding: 1.5rem;
+          text-align: left;
+          color: inherit;
+          text-decoration: none;
+          border: 1px solid #eaeaea;
+          border-radius: 10px;
+          transition: color 0.15s ease, border-color 0.15s ease;
+          width: 45%;
+        }
+
+        .card:hover,
+        .card:focus,
+        .card:active {
+          color: #0070f3;
+          border-color: #0070f3;
+        }
+
+        .card h2 {
+          margin: 0 0 1rem 0;
+          font-size: 1.5rem;
+        }
+
+        .card p {
+          margin: 0;
+          font-size: 1.25rem;
+          line-height: 1.5;
+        }
+      `}</style>
+    </>
   );
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const data = await getPokemons();
-  const pokemons: Pokemon[] = data.results;
-
-  const promises: unknown[] = [];
-  pokemons.forEach((pokemon: Pokemon) => {
-    promises.push(
-      getPokemonByUrl(pokemon.url).then((detail) => {
-        const defaultSprite = detail.sprites.front_default;
-        pokemon.id = detail.id + '';
-        pokemon.types = detail.types.flatMap((type: any) => type.type);
-        pokemon.sprites = {
-          front_default:
-            detail.sprites.other?.['official-artwork']?.front_default ||
-            defaultSprite,
-        };
-      })
-    );
-  });
-
-  await Promise.allSettled(promises);
-
-  const paths = pokemons.map((pokemon) => ({
-    params: { id: pokemon.id },
-  }));
-
-  console.log(paths);
-  return { paths, fallback: false };
+  return { paths: [], fallback: true };
 };
 
-export const getStaticProps = async ({ params }: any) => {
-  // params contains the post `id`.
-  // If the route is like /posts/1, then params.id is 1
-  console.log(params);
-  const pokemon = await getPokemonById(params.id);
+export const getStaticProps: GetStaticProps = async (context) => {
+  const id = context.params?.id as string;
 
-  // Pass post data to the page via props
-  return {
-    props: {
-      pokemon,
-    },
-  };
-};
+  if (id.length > 4 || !POKEMON_ID.test(id)) {
+    return { notFound: true };
+  }
 
-const getPokemons = async (nextUrl = '') => {
-  const url =
-    nextUrl.trim() === '' ? 'https://pokeapi.co/api/v2/pokemon' : nextUrl;
-  const response = await fetch(url);
-  return await response.json();
-};
-
-const getPokemonByUrl = async (url: string) => {
-  const response = await fetch(url);
-  return await response.json();
-};
-
-const getPokemonById = async (id: string) => {
-  const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-  return await response.json();
+  try {
+    const pokemon = await fetchPokemonById(id);
+    return pokemon ? { props: { pokemon } } : { notFound: true };
+  } catch (error) {
+    console.error(error);
+    return { notFound: true };
+  }
 };
 
 export default Pokemon;
