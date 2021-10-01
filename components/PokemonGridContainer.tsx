@@ -21,17 +21,21 @@ export interface IPokemon {
 
 interface PokemonGridContainerProps {
   pokemons: IPokemon[];
+  search: string;
 }
 
 const PokemonGridContainer: React.FC<PokemonGridContainerProps> = ({
   pokemons,
+  search,
 }) => {
   return (
     <div className={styles['grid-container']}>
       {pokemons &&
-        pokemons.map((pokemon, index) => (
-          <PokemonGrid key={index} pokemon={pokemon} pokemonId={++index} />
-        ))}
+        pokemons
+          .filter((pokemon) => pokemon.name.toLowerCase().includes(search))
+          .map((pokemon, index) => (
+            <PokemonGrid key={index} pokemon={pokemon} pokemonId={++index} />
+          ))}
     </div>
   );
 };

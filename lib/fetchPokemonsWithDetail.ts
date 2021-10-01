@@ -1,4 +1,4 @@
-import { IPokemon, Type } from '../components/PokemonGridContainer';
+import { IPokemon } from '../components/PokemonGridContainer';
 import fetchPokemonByUrl from './fetchPokemonByUrl';
 
 export interface PokeApiPageData {
@@ -8,14 +8,9 @@ export interface PokeApiPageData {
   results: any[];
 }
 
-const fetchPokemonsWithDetail = async (url: string, search: string) =>
+const fetchPokemonsWithDetail = async (url: string) =>
   fetch(url).then(async (response) => {
     const data: PokeApiPageData = await response.json();
-
-    data.results = data.results.filter((pokemon: IPokemon) =>
-      pokemon.name.toLowerCase().includes(search)
-    );
-
     const promises: Promise<any>[] = buildPromises(data);
     await Promise.allSettled(promises);
     return data;
